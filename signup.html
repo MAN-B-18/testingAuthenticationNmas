@@ -5,7 +5,6 @@
 <title>NMAS Staff Registration</title>
 
 <style>
-
 body{
 margin:0;
 font-family:Arial;
@@ -58,6 +57,7 @@ width:100%;
 margin-top:10px;
 border-radius:10px;
 border:3px solid #ff7a00;
+display:none;
 }
 
 img{
@@ -65,7 +65,6 @@ width:100%;
 margin-top:10px;
 border-radius:10px;
 }
-
 </style>
 </head>
 
@@ -76,20 +75,22 @@ border-radius:10px;
 <div class="container">
 
 <input id="fullname" type="text" placeholder="Full Name">
-<input id="email" type="email" placeholder="Email">
-<input id="phone" type="text" placeholder="Phone Number">
-<input id="staff" type="text" placeholder="Staff Number">
-<input id="province" type="text" placeholder="Province">
-<input id="district" type="text" placeholder="District">
-<input id="facility" type="text" placeholder="Health Facility Name">
+<input type="email" placeholder="Email">
+<input type="text" placeholder="Phone Number">
+<input type="text" placeholder="Staff Number">
+<input type="text" placeholder="Province">
+<input type="text" placeholder="District">
+<input type="text" placeholder="Health Facility Name">
 
-<h3>Capture Face Image</h3>
+<h3>Face Scanner</h3>
+
+<button onclick="startCamera()">Open Image Scanner</button>
 
 <video id="video" autoplay></video>
 
 <button onclick="capture()">Capture Image</button>
 
-<img id="preview">
+<div id="previews"></div>
 
 <button onclick="registerStaff()">Register Staff</button>
 
@@ -101,113 +102,99 @@ border-radius:10px;
 
 <script>
 
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const preview = document.getElementById("preview");
-const statusText = document.getElementById("status");
+const video=document.getElementById("video");
+const canvas=document.getElementById("canvas");
+const previews=document.getElementById("previews");
+const statusText=document.getElementById("status");
 
-let capturedBlob = null;
+let capturedBlobs=[]; // store multiple images
+let stream=null;
 
-const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
-const REGISTER_URL = "http://localhost:8000/api/v1/recognition/faces";
+const API_KEY="ccb5846a-2b2b-46c6-adac-1802ac50488b";
+const REGISTER_URL="http://localhost:8000/api/v1/recognition/faces";
 
 
-// Start camera
-navigator.mediaDevices.getUserMedia({ video:true })
-.then(stream=>{
-video.srcObject = stream;
-statusText.innerText="Camera ready";
+function startCamera(){
+navigator.mediaDevices.getUserMedia({video:true})
+.then(s=>{
+stream=s;
+video.srcObject=s;
+video.style.display="block";
+statusText.innerText="Camera started";
 })
 .catch(err=>{
-statusText.innerText="Camera access denied";
-console.error(err);
+statusText.innerText="Camera permission denied";
 });
+}
 
 
-// Capture Image
 function capture(){
 
-const ctx = canvas.getContext("2d");
+if(!stream){
+statusText.innerText="Open scanner first";
+return;
+}
 
+const ctx=canvas.getContext("2d");
 canvas.width=640;
 canvas.height=480;
-
-ctx.drawImage(video,0,0,canvas.width,canvas.height);
+ctx.drawImage(video,0,0,640,480);
 
 canvas.toBlob(blob=>{
+capturedBlobs.push(blob);
 
-capturedBlob = blob;
+const img=document.createElement("img");
+img.src=URL.createObjectURL(blob);
+previews.appendChild(img);
 
-preview.src = URL.createObjectURL(blob);
-
-statusText.innerText="Image captured successfully";
+statusText.innerText=`Captured ${capturedBlobs.length} image(s)`;
 
 },"image/jpeg",0.8);
 
 }
 
 
-
-// Register staff face
 async function registerStaff(){
 
-let fullname = document.getElementById("fullname").value.trim();
+let fullname=document.getElementById("fullname").value.trim();
 
 if(fullname===""){
 statusText.innerText="Enter full name first";
 return;
 }
 
-if(!capturedBlob){
-statusText.innerText="Capture image first";
+if(capturedBlobs.length===0){
+statusText.innerText="Capture at least one face image";
 return;
 }
 
+statusText.innerText="Registering staff faces...";
+
 try{
+for(let i=0;i<capturedBlobs.length;i++){
+const formData=new FormData();
+formData.append("file",capturedBlobs[i],`face${i+1}.jpg`);
+formData.append("subject",fullname);
 
-statusText.innerText="Registering staff face...";
-
-const formData = new FormData();
-
-/* SAME METHOD THAT WORKED IN YOUR CODE */
-formData.append("file", capturedBlob, "face.jpg");
-formData.append("subject", fullname);
-
-const response = await fetch(REGISTER_URL,{
+const response=await fetch(REGISTER_URL,{
 method:"POST",
-headers:{
-"x-api-key":API_KEY
-},
+headers:{"x-api-key":API_KEY},
 body:formData
 });
 
-const data = await response.json();
-
-console.log(data);
-
-/* SUCCESS */
-if(data){
-
-statusText.innerText="Staff registered successfully. Redirecting to login...";
-
-setTimeout(()=>{
-
-window.location.href="login.html";
-
-},2000);
-
-}else{
-
-statusText.innerText="Face registration failed";
-
+const data=await response.json();
+console.log(`Face ${i+1} uploaded:`,data);
 }
 
-}catch(error){
+statusText.innerText="All faces registered successfully. Redirecting...";
 
-console.error(error);
+setTimeout(()=>{
+window.location.href="login.html";
+},2000);
 
-statusText.innerText="Could not connect to CompreFace";
-
+}catch(err){
+console.error(err);
+statusText.innerText="Registration failed";
 }
 
 }
