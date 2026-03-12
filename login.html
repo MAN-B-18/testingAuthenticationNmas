@@ -1,0 +1,156 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NMAS Login</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(135deg,#ff7a00,#ffffff);
+}
+
+header{
+background:#ff7a00;
+color:white;
+padding:15px;
+text-align:center;
+font-size:22px;
+}
+
+.container{
+background:white;
+width:450px;
+margin:40px auto;
+padding:30px;
+border-radius:10px;
+box-shadow:0px 5px 15px rgba(0,0,0,0.2);
+}
+
+input{
+width:100%;
+padding:10px;
+margin:8px 0;
+border-radius:5px;
+border:1px solid #ccc;
+}
+
+button{
+width:100%;
+padding:12px;
+margin-top:10px;
+border:none;
+border-radius:6px;
+font-size:16px;
+background:#ff7a00;
+color:white;
+cursor:pointer;
+}
+
+button:hover{
+background:#e65c00;
+}
+
+video{
+width:100%;
+margin-top:10px;
+border-radius:10px;
+border:3px solid #ff7a00;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>NMAS Staff Login</header>
+
+<div class="container">
+
+<input type="text" placeholder="Username">
+<input type="text" placeholder="Phone Number (Receive OTP)">
+
+<button onclick="sendOTP()">Send OTP</button>
+
+<input type="text" placeholder="Enter OTP">
+
+<h3>Face Verification</h3>
+
+<video id="video" autoplay></video>
+
+<button onclick="verifyFace()">Verify Identity</button>
+
+<canvas id="canvas" style="display:none"></canvas>
+
+<p id="result"></p>
+
+</div>
+
+<script>
+
+const video=document.getElementById("video");
+const canvas=document.getElementById("canvas");
+const result=document.getElementById("result");
+
+const API_KEY="ccb5846a-2b2b-46c6-adac-1802ac50488b";
+const RECOGNITION_URL="http://localhost:8000/api/v1/recognition/recognize";
+
+navigator.mediaDevices.getUserMedia({video:true})
+.then(stream=>{
+video.srcObject=stream;
+});
+
+function sendOTP(){
+alert("OTP sent to phone");
+}
+
+function verifyFace(){
+
+const ctx=canvas.getContext("2d");
+
+canvas.width=640;
+canvas.height=480;
+
+ctx.drawImage(video,0,0,640,480);
+
+canvas.toBlob(blob=>{
+recognize(blob);
+},"image/jpeg",0.8);
+
+}
+
+async function recognize(blob){
+
+const formData=new FormData();
+formData.append("file",blob,"face.jpg");
+
+const res=await fetch(RECOGNITION_URL,{
+method:"POST",
+headers:{"x-api-key":API_KEY},
+body:formData
+});
+
+const data=await res.json();
+
+if(data.result.length>0 && data.result[0].subjects.length>0){
+
+let person=data.result[0].subjects[0].subject;
+
+result.innerText="Welcome "+person;
+
+}else{
+
+result.innerText="Face not recognized";
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
+```
