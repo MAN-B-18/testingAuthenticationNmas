@@ -66,11 +66,6 @@ margin-top:10px;
 border-radius:10px;
 }
 
-#status{
-margin-top:10px;
-font-weight:bold;
-}
-
 </style>
 </head>
 
@@ -96,7 +91,7 @@ font-weight:bold;
 
 <img id="preview">
 
-<button onclick="registerFace()">Register Staff</button>
+<button onclick="registerStaff()">Register Staff</button>
 
 <canvas id="canvas" style="display:none"></canvas>
 
@@ -114,17 +109,17 @@ const statusText = document.getElementById("status");
 let capturedBlob = null;
 
 const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
+const REGISTER_URL = "http://localhost:8000/api/v1/recognition/faces";
 
-const BASE_URL = "http://localhost:8000/api/v1/recognition/faces";
 
-
-// Start Camera
-navigator.mediaDevices.getUserMedia({video:true})
+// Start camera
+navigator.mediaDevices.getUserMedia({ video:true })
 .then(stream=>{
 video.srcObject = stream;
+statusText.innerText="Camera ready";
 })
 .catch(err=>{
-statusText.innerText = "Camera access denied";
+statusText.innerText="Camera access denied";
 console.error(err);
 });
 
@@ -134,8 +129,8 @@ function capture(){
 
 const ctx = canvas.getContext("2d");
 
-canvas.width = 640;
-canvas.height = 480;
+canvas.width=640;
+canvas.height=480;
 
 ctx.drawImage(video,0,0,canvas.width,canvas.height);
 
@@ -145,19 +140,20 @@ capturedBlob = blob;
 
 preview.src = URL.createObjectURL(blob);
 
-statusText.innerText = "Image captured successfully";
+statusText.innerText="Image captured successfully";
 
-},"image/jpeg",0.9);
+},"image/jpeg",0.8);
 
 }
 
 
-// Register Face
-async function registerFace(){
 
-let name = document.getElementById("fullname").value.trim();
+// Register staff face
+async function registerStaff(){
 
-if(name === ""){
+let fullname = document.getElementById("fullname").value.trim();
+
+if(fullname===""){
 statusText.innerText="Enter full name first";
 return;
 }
@@ -169,15 +165,15 @@ return;
 
 try{
 
-statusText.innerText="Uploading face to CompreFace...";
+statusText.innerText="Registering staff face...";
 
 const formData = new FormData();
+
+/* SAME METHOD THAT WORKED IN YOUR CODE */
 formData.append("file", capturedBlob, "face.jpg");
+formData.append("subject", fullname);
 
-/* SUBJECT MUST BE IN URL */
-const url = BASE_URL + "?subject=" + encodeURIComponent(name);
-
-const response = await fetch(url,{
+const response = await fetch(REGISTER_URL,{
 method:"POST",
 headers:{
 "x-api-key":API_KEY
@@ -187,34 +183,30 @@ body:formData
 
 const data = await response.json();
 
-console.log("CompreFace response:", data);
+console.log(data);
 
+/* SUCCESS */
+if(data){
 
-/* SUCCESS CHECK */
-if(data.result){
+statusText.innerText="Staff registered successfully. Redirecting to login...";
 
-statusText.innerText = "Staff registered successfully! Redirecting to login...";
-
-/* CLEAR FORM */
-document.querySelectorAll("input").forEach(input => input.value="");
-preview.src="";
-capturedBlob=null;
-
-/* REDIRECT */
 setTimeout(()=>{
+
 window.location.href="login.html";
+
 },2000);
 
 }else{
 
-statusText.innerText = "Face registration failed";
+statusText.innerText="Face registration failed";
 
 }
 
 }catch(error){
 
 console.error(error);
-statusText.innerText="Could not connect to CompreFace server";
+
+statusText.innerText="Could not connect to CompreFace";
 
 }
 
