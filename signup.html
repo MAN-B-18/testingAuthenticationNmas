@@ -114,7 +114,8 @@ const statusText = document.getElementById("status");
 let capturedBlob = null;
 
 const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
-const REGISTER_URL = "http://localhost:8000/api/v1/recognition/faces";
+
+const BASE_URL = "http://localhost:8000/api/v1/recognition/faces";
 
 
 // Start Camera
@@ -144,8 +145,6 @@ capturedBlob = blob;
 
 preview.src = URL.createObjectURL(blob);
 
-console.log("Captured image blob:", blob);
-
 statusText.innerText = "Image captured successfully";
 
 },"image/jpeg",0.9);
@@ -156,12 +155,10 @@ statusText.innerText = "Image captured successfully";
 // Register Face
 async function registerFace(){
 
-let name = document.getElementById("fullname").value;
-let email = document.getElementById("email").value;
-let phone = document.getElementById("phone").value;
+let name = document.getElementById("fullname").value.trim();
 
-if(name === "" || email === "" || phone === ""){
-statusText.innerText="Please fill all required fields";
+if(name === ""){
+statusText.innerText="Enter full name first";
 return;
 }
 
@@ -170,16 +167,17 @@ statusText.innerText="Capture image first";
 return;
 }
 
-const formData = new FormData();
-
-formData.append("file", capturedBlob, "face.jpg");
-formData.append("subject", name);
-
 try{
 
-statusText.innerText="Registering staff...";
+statusText.innerText="Uploading face to CompreFace...";
 
-const response = await fetch(REGISTER_URL,{
+const formData = new FormData();
+formData.append("file", capturedBlob, "face.jpg");
+
+/* SUBJECT MUST BE IN URL */
+const url = BASE_URL + "?subject=" + encodeURIComponent(name);
+
+const response = await fetch(url,{
 method:"POST",
 headers:{
 "x-api-key":API_KEY
@@ -192,17 +190,19 @@ const data = await response.json();
 console.log("CompreFace response:", data);
 
 
-if(data){
+/* SUCCESS CHECK */
+if(data.result){
 
 statusText.innerText = "Staff registered successfully! Redirecting to login...";
 
+/* CLEAR FORM */
 document.querySelectorAll("input").forEach(input => input.value="");
 preview.src="";
+capturedBlob=null;
 
+/* REDIRECT */
 setTimeout(()=>{
-
 window.location.href="login.html";
-
 },2000);
 
 }else{
@@ -214,8 +214,7 @@ statusText.innerText = "Face registration failed";
 }catch(error){
 
 console.error(error);
-
-statusText.innerText="Server error connecting to CompreFace";
+statusText.innerText="Could not connect to CompreFace server";
 
 }
 
