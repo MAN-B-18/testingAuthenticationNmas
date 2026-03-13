@@ -2,18 +2,73 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NMAS Staff Registration</title>
 <style>
-body{margin:0;font-family:Arial;background:linear-gradient(135deg,#ff7a00,#ffffff);}
-header{background:#ff7a00;color:white;padding:15px;text-align:center;font-size:22px;}
-.container{background:white;width:500px;margin:40px auto;padding:30px;border-radius:10px;box-shadow:0px 5px 15px rgba(0,0,0,0.2);}
-input{width:100%;padding:10px;margin:8px 0;border-radius:5px;border:1px solid #ccc;}
-button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:6px;font-size:16px;background:#ff7a00;color:white;cursor:pointer;}
-button:hover{background:#e65c00;}
-video{width:100%;margin-top:10px;border-radius:10px;border:3px solid #ff7a00;display:none;}
-img{width:100px;margin:5px;border-radius:5px;}
-#previews{display:flex;flex-wrap:wrap;}
-#status{margin-top:10px;font-weight:bold;}
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(135deg,#ff7a00,#ffffff);
+}
+header{
+  background:#ff7a00;
+  color:white;
+  padding:15px;
+  text-align:center;
+  font-size:22px;
+}
+.container{
+  background:white;
+  width:500px;
+  margin:40px auto;
+  padding:30px;
+  border-radius:10px;
+  box-shadow:0px 5px 15px rgba(0,0,0,0.2);
+}
+input{
+  width:100%;
+  padding:10px;
+  margin:8px 0;
+  border-radius:5px;
+  border:1px solid #ccc;
+}
+button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border:none;
+  border-radius:6px;
+  font-size:16px;
+  background:#ff7a00;
+  color:white;
+  cursor:pointer;
+}
+button:hover{
+  background:#e65c00;
+}
+video{
+  width:100%;
+  margin-top:10px;
+  border-radius:10px;
+  border:3px solid #ff7a00;
+  display:none;
+}
+#previews{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-top:10px;
+}
+#previews img{
+  width:100px;
+  margin:5px;
+  border-radius:5px;
+  border:2px solid #ff7a00;
+}
+#status{
+  margin-top:10px;
+  font-weight:bold;
+}
 </style>
 </head>
 <body>
@@ -21,115 +76,111 @@ img{width:100px;margin:5px;border-radius:5px;}
 <header>NMAS Staff Registration</header>
 
 <div class="container">
+  <input id="fullname" type="text" placeholder="Full Name">
+  <input id="email" type="email" placeholder="Email">
+  <input id="phone" type="text" placeholder="Phone Number">
+  <input id="staff" type="text" placeholder="Staff Number">
+  <input id="province" type="text" placeholder="Province">
+  <input id="district" type="text" placeholder="District">
+  <input id="facility" type="text" placeholder="Health Facility Name">
 
-<input id="fullname" type="text" placeholder="Full Name">
-<input type="email" placeholder="Email">
-<input type="text" placeholder="Phone Number">
-<input type="text" placeholder="Staff Number">
-<input type="text" placeholder="Province">
-<input type="text" placeholder="District">
-<input type="text" placeholder="Health Facility Name">
+  <h3>Face Scanner</h3>
+  <button onclick="startCamera()">Open Image Scanner</button>
+  <video id="video" autoplay></video>
+  <br>
+  <button onclick="capture()">Capture Face</button>
 
-<h3>Face Scanner</h3>
-<button onclick="startCamera()">Open Image Scanner</button>
-<video id="video" autoplay></video>
-<button onclick="capture()">Capture Image</button>
-
-<div id="previews"></div>
-
-<button onclick="registerStaff()">Register Staff</button>
-<canvas id="canvas" style="display:none"></canvas>
-<p id="status"></p>
-
+  <div id="previews"></div>
+  <p id="status">Camera inactive</p>
 </div>
 
 <script>
 const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
 const previews = document.getElementById("previews");
 const statusText = document.getElementById("status");
+const canvas = document.createElement("canvas");
 
-let capturedBlobs = [];
 let stream = null;
+let capturedImages = [];
 
 const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
 const REGISTER_URL = "http://localhost:8000/api/v1/recognition/faces";
 
-// Start camera on demand
+// Open camera only when user clicks
 function startCamera(){
-  navigator.mediaDevices.getUserMedia({video:true})
-  .then(s=>{
-    stream = s;
-    video.srcObject = s;
-    video.style.display = "block";
-    statusText.innerText = "Camera started";
-  })
-  .catch(err=>{
-    statusText.innerText = "Camera permission denied";
-    console.error(err);
-  });
+  navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+    .then(s => {
+      stream = s;
+      video.srcObject = stream;
+      video.style.display = "block";
+      statusText.innerText = "Camera active";
+    })
+    .catch(err => {
+      console.error(err);
+      statusText.innerText = "Camera permission denied";
+    });
 }
 
-// Capture multiple images
+// Capture face image and register immediately
 function capture(){
   if(!stream){
-    statusText.innerText = "Open scanner first";
+    statusText.innerText = "Start camera first!";
+    return;
+  }
+
+  const fullname = document.getElementById("fullname").value.trim();
+  if(fullname === ""){
+    statusText.innerText = "Enter Full Name first!";
     return;
   }
 
   const ctx = canvas.getContext("2d");
   canvas.width = 640;
   canvas.height = 480;
-  ctx.drawImage(video,0,0,640,480);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  canvas.toBlob(blob=>{
-    capturedBlobs.push(blob);
-
+  canvas.toBlob(async blob => {
+    // Show preview
     const img = document.createElement("img");
     img.src = URL.createObjectURL(blob);
     previews.appendChild(img);
 
-    statusText.innerText = `Captured ${capturedBlobs.length} image(s)`;
+    // Save to array
+    capturedImages.push({ blob, subject: fullname });
 
-  },"image/jpeg",0.8);
+    statusText.innerText = `Captured ${capturedImages.length} face(s)`;
+
+    // Register immediately
+    await registerFace(blob, fullname);
+
+  }, "image/jpeg", 0.8);
 }
 
-// Register all captured faces
-async function registerStaff(){
-  let fullname = document.getElementById("fullname").value.trim();
-  if(fullname === ""){
-    statusText.innerText = "Enter full name first";
-    return;
-  }
-  if(capturedBlobs.length === 0){
-    statusText.innerText = "Capture at least one face image";
-    return;
-  }
+// Register face in CompreFace
+async function registerFace(blob, subject){
+  const formData = new FormData();
+  formData.append("file", blob, "face.jpg");
+  formData.append("subject", subject);
 
-  statusText.innerText = "Registering faces...";
-  
   try{
-    for(let i=0; i<capturedBlobs.length; i++){
-      const formData = new FormData();
-      formData.append("file", capturedBlobs[i], `face${i+1}.jpg`);
-      formData.append("subject", fullname);
+    const response = await fetch(REGISTER_URL, {
+      method: "POST",
+      headers: { "x-api-key": API_KEY },
+      body: formData
+    });
 
-      const response = await fetch(REGISTER_URL, {
-        method: "POST",
-        headers: {"x-api-key": API_KEY},
-        body: formData
-      });
+    const data = await response.json();
+    console.log("Registration result for", subject, data);
+    statusText.innerText = `Registered: ${subject}`;
 
-      const data = await response.json();
-      console.log(`Face ${i+1} uploaded:`, data);
-    }
-
-    statusText.innerText = "All faces registered successfully! Redirecting...";
-    setTimeout(()=>{ window.location.href="login.html"; }, 2000);
+    // Redirect after first successful registration
+    setTimeout(() => {
+      window.location.href = "login.html";
+    }, 2000);
 
   }catch(err){
     console.error(err);
-    statusText.innerText = "Registration failed";
+    statusText.innerText = `Registration failed for ${subject}`;
   }
 }
 </script>
