@@ -106,7 +106,7 @@ let capturedImages = [];
 const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
 const REGISTER_URL = "http://localhost:8000/api/v1/recognition/faces";
 
-// Open camera only when user clicks
+// Open camera only on button click
 function startCamera(){
   navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
     .then(s => {
@@ -145,12 +145,10 @@ function capture(){
     img.src = URL.createObjectURL(blob);
     previews.appendChild(img);
 
-    // Save to array
     capturedImages.push({ blob, subject: fullname });
-
     statusText.innerText = `Captured ${capturedImages.length} face(s)`;
 
-    // Register immediately
+    // Register each face immediately to CompreFace
     await registerFace(blob, fullname);
 
   }, "image/jpeg", 0.8);
@@ -171,14 +169,16 @@ async function registerFace(blob, subject){
 
     const data = await response.json();
     console.log("Registration result for", subject, data);
-    statusText.innerText = `Registered: ${subject}`;
 
-    // Redirect after first successful registration
-    setTimeout(() => {
-      window.location.href = "login.html";
-    }, 2000);
+    if(data.result){
+      statusText.innerText = `Registered: ${subject}`;
+      // Optional: Redirect only after at least 1 registration
+      setTimeout(() => { window.location.href = "login.html"; }, 2000);
+    } else {
+      statusText.innerText = `Failed to register ${subject}`;
+    }
 
-  }catch(err){
+  } catch(err){
     console.error(err);
     statusText.innerText = `Registration failed for ${subject}`;
   }
