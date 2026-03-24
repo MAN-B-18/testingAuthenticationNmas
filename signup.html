@@ -102,7 +102,8 @@ const canvas = document.createElement("canvas");
 
 let stream = null;
 
-const API_KEY = "b4543023-c0ea-430c-9d10-ebc271d1ac0c";
+// Use the API key from your Recognition service
+const API_KEY = "YOUR_RECOGNITION_API_KEY";
 const REGISTER_URL = "http://localhost:8000/api/v1/recognition/faces";
 
 function startCamera(){
@@ -144,7 +145,7 @@ function capture(){
     statusText.innerText = "Captured face, registering...";
 
     await registerFace(blob, fullname);
-  }, "image/jpeg", 0.8);
+  }, "image/jpeg", 0.95); // higher quality
 }
 
 async function registerFace(blob, subject){
@@ -162,15 +163,17 @@ async function registerFace(blob, subject){
     const data = await response.json();
     console.log("Registration result:", data);
 
-    if(data.result){
+    if(data.result && data.result.length > 0){
       statusText.innerText = `Registered: ${subject}`;
       // Save staff details to your backend here
       // Example:
       // await fetch('/save-staff', { method:'POST', body: JSON.stringify({ fullname, email, phone, staff, province, district, facility }) })
 
       setTimeout(() => { window.location.href = "login.html"; }, 2000);
+    } else if(data.message){
+      statusText.innerText = `Error: ${data.message}`;
     } else {
-      statusText.innerText = `Failed to register ${subject}`;
+      statusText.innerText = `Failed to register ${subject} (no face detected)`;
     }
 
   } catch(err){
