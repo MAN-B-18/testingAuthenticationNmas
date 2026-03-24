@@ -2,15 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NMAS Staff Login</title>
-
 <style>
 body{
   margin:0;
   font-family:Arial;
   background:linear-gradient(135deg,#ff7a00,#ffffff);
 }
-
 header{
   background:#ff7a00;
   color:white;
@@ -18,24 +17,15 @@ header{
   text-align:center;
   font-size:22px;
 }
-
 .container{
   background:white;
-  width:450px;
+  width:500px;
   margin:40px auto;
   padding:30px;
   border-radius:10px;
   box-shadow:0px 5px 15px rgba(0,0,0,0.2);
+  text-align:center;
 }
-
-input{
-  width:100%;
-  padding:10px;
-  margin:8px 0;
-  border-radius:5px;
-  border:1px solid #ccc;
-}
-
 button{
   width:100%;
   padding:12px;
@@ -47,11 +37,9 @@ button{
   color:white;
   cursor:pointer;
 }
-
 button:hover{
   background:#e65c00;
 }
-
 video{
   width:100%;
   margin-top:10px;
@@ -59,135 +47,90 @@ video{
   border:3px solid #ff7a00;
   display:none;
 }
-
-#previews img{
-  width:100px;
-  margin:5px;
-  border-radius:5px;
+#status{
+  margin-top:10px;
+  font-weight:bold;
 }
 </style>
 </head>
-
 <body>
 
 <header>NMAS Staff Login</header>
 
 <div class="container">
-
-<input id="username" type="text" placeholder="Username">
-<input id="phone" type="text" placeholder="Phone Number (Receive OTP)">
-<button onclick="sendOTP()">Send OTP</button>
-
-<input id="otp" type="text" placeholder="Enter OTP">
-
-<h3>Face Verification</h3>
-<button onclick="startCamera()">Open Image Scanner</button>
-<video id="video" autoplay></video>
-<button onclick="capture()">Capture Face</button>
-
-<div id="previews"></div>
-<button onclick="verifyFaces()">Verify Identity</button>
-
-<canvas id="canvas" style="display:none"></canvas>
-<p id="result"></p>
-
+  <h3>Face Scanner</h3>
+  <button onclick="startCamera()">Open Camera</button>
+  <video id="video" autoplay></video>
+  <br>
+  <button onclick="capture()">Login with Face</button>
+  <p id="status">Camera inactive</p>
 </div>
 
 <script>
 const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const previews = document.getElementById("previews");
-const result = document.getElementById("result");
+const statusText = document.getElementById("status");
+const canvas = document.createElement("canvas");
 
 let stream = null;
-let capturedBlobs = []; // store multiple face captures
 
 const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
-const RECOGNITION_URL = "http://localhost:8000/api/v1/recognition/recognize";
+const RECOGNIZE_URL = "http://localhost:8000/api/v1/recognition/recognize";
 
+// Start camera
 function startCamera(){
-  navigator.mediaDevices.getUserMedia({video:true})
-  .then(s=>{
-    stream = s;
-    video.srcObject = stream;
-    video.style.display = "block";
-    result.innerText = "Camera started";
-  })
-  .catch(err=>{
-    result.innerText = "Camera access denied";
-    console.error(err);
-  });
+  navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+    .then(s => {
+      stream = s;
+      video.srcObject = stream;
+      video.style.display = "block";
+      statusText.innerText = "Camera active";
+    })
+    .catch(err => {
+      console.error(err);
+      statusText.innerText = "Camera permission denied";
+    });
 }
 
+// Capture and send to recognition API
 function capture(){
   if(!stream){
-    result.innerText = "Open scanner first";
+    statusText.innerText = "Start camera first!";
     return;
   }
-  
+
   const ctx = canvas.getContext("2d");
   canvas.width = 640;
   canvas.height = 480;
-  ctx.drawImage(video,0,0,640,480);
-  
-  canvas.toBlob(blob=>{
-    capturedBlobs.push(blob);
-    
-    const img = document.createElement("img");
-    img.src = URL.createObjectURL(blob);
-    previews.appendChild(img);
-    
-    result.innerText = `Captured ${capturedBlobs.length} image(s)`;
-  },"image/jpeg",0.8);
-}
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-async function verifyFaces(){
-  if(capturedBlobs.length === 0){
-    result.innerText = "Capture at least one face image";
-    return;
-  }
-  
-  result.innerText = "Verifying faces...";
-  
-  let recognized = false;
-  
-  for(let i=0;i<capturedBlobs.length;i++){
-    const formData = new FormData();
-    formData.append("file", capturedBlobs[i], `face${i+1}.jpg`);
-    
+  canvas.toBlob(async blob => {
     try{
-      const res = await fetch(RECOGNITION_URL,{
+      const formData = new FormData();
+      formData.append("file", blob, "face.jpg");
+
+      const response = await fetch(RECOGNIZE_URL, {
         method: "POST",
-        headers: {"x-api-key": API_KEY},
+        headers: { "x-api-key": API_KEY },
         body: formData
       });
-      const data = await res.json();
-      console.log(`Face ${i+1} recognition:`, data);
-      
-      if(data.result.length > 0 && data.result[0].subjects.length > 0){
-        let person = data.result[0].subjects[0].subject;
-        recognized = true;
-        result.innerText = `Welcome, ${person}! Login successful.`;
-        break; // stop after first successful match
+
+      const data = await response.json();
+      console.log("Recognition result:", data);
+
+      if(data.result && data.result.length > 0){
+        const subject = data.result[0].subjects[0].subject;
+        statusText.innerText = `Welcome, ${subject}!`;
+        // Redirect to dashboard
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 2000);
+      } else {
+        statusText.innerText = "Face not recognized. Try again.";
       }
+
     } catch(err){
       console.error(err);
+      statusText.innerText = "Recognition failed.";
     }
-  }
-  
-  if(!recognized){
-    result.innerText = "Face not recognized. Please try again.";
-  }
-  
-  // stop camera after verification
-  if(stream){
-    stream.getTracks().forEach(track => track.stop());
-    video.style.display = "none";
-  }
-}
-
-function sendOTP(){
-  alert("OTP sent to phone (demo)");
+  }, "image/jpeg", 0.8);
 }
 </script>
 
