@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NMAS Staff Login</title>
 <style>
-body{
+body {
   margin:0;
-  font-family:Arial;
+  font-family:Arial, sans-serif;
   background:linear-gradient(135deg,#ff7a00,#ffffff);
 }
-header{
+header {
   background:#ff7a00;
   color:white;
   padding:15px;
   text-align:center;
   font-size:22px;
 }
-.container{
+.container {
   background:white;
   width:500px;
   margin:40px auto;
@@ -26,7 +26,7 @@ header{
   box-shadow:0px 5px 15px rgba(0,0,0,0.2);
   text-align:center;
 }
-button{
+button {
   width:100%;
   padding:12px;
   margin-top:10px;
@@ -37,17 +37,17 @@ button{
   color:white;
   cursor:pointer;
 }
-button:hover{
+button:hover {
   background:#e65c00;
 }
-video{
+video {
   width:100%;
   margin-top:10px;
   border-radius:10px;
   border:3px solid #ff7a00;
   display:none;
 }
-#status{
+#status {
   margin-top:10px;
   font-weight:bold;
 }
@@ -76,7 +76,6 @@ let stream = null;
 const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
 const RECOGNIZE_URL = "http://localhost:8000/api/v1/recognition/recognize";
 
-// Start camera
 function startCamera(){
   navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
     .then(s => {
@@ -91,7 +90,6 @@ function startCamera(){
     });
 }
 
-// Capture and send to recognition API
 function capture(){
   if(!stream){
     statusText.innerText = "Start camera first!";
@@ -105,6 +103,8 @@ function capture(){
 
   canvas.toBlob(async blob => {
     try{
+      statusText.innerText = "Processing face...";
+
       const formData = new FormData();
       formData.append("file", blob, "face.jpg");
 
@@ -117,18 +117,21 @@ function capture(){
       const data = await response.json();
       console.log("Recognition result:", data);
 
-      if(data.result && data.result.length > 0){
+      if(data.result && data.result.length > 0 && data.result[0].subjects.length > 0){
         const subject = data.result[0].subjects[0].subject;
-        statusText.innerText = `Welcome, ${subject}!`;
-        // Redirect to dashboard
+        statusText.innerText = `Welcome, ${subject}! Redirecting...`;
+
+        // Optional: validate subject against your backend staff DB here
+        // Example: await fetch('/validate-login', { method:'POST', body: JSON.stringify({ subject }) })
+
         setTimeout(() => { window.location.href = "dashboard.html"; }, 2000);
       } else {
-        statusText.innerText = "Face not recognized. Try again.";
+        statusText.innerText = "Face not recognized. Please try again.";
       }
 
     } catch(err){
       console.error(err);
-      statusText.innerText = "Recognition failed.";
+      statusText.innerText = "Recognition failed. Check server connection.";
     }
   }, "image/jpeg", 0.8);
 }
