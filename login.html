@@ -73,6 +73,7 @@ const canvas = document.createElement("canvas");
 
 let stream = null;
 
+// Use the API key from your Recognition service
 const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
 const RECOGNIZE_URL = "http://localhost:8000/api/v1/recognition/recognize";
 
@@ -102,38 +103,42 @@ function capture(){
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   canvas.toBlob(async blob => {
-    try{
-      statusText.innerText = "Processing face...";
+    statusText.innerText = "Processing face...";
+    await recognizeFace(blob);
+  }, "image/jpeg", 0.95);
+}
 
-      const formData = new FormData();
-      formData.append("file", blob, "face.jpg");
+async function recognizeFace(blob){
+  const formData = new FormData();
+  formData.append("file", blob, "face.jpg");
 
-      const response = await fetch(RECOGNIZE_URL, {
-        method: "POST",
-        headers: { "x-api-key": API_KEY },
-        body: formData
-      });
+  try{
+    const response = await fetch(RECOGNIZE_URL, {
+      method: "POST",
+      headers: { "x-api-key": API_KEY },
+      body: formData
+    });
 
-      const data = await response.json();
-      console.log("Recognition result:", data);
+    const data = await response.json();
+    console.log("Recognition result:", data);
 
-      if(data.result && data.result.length > 0 && data.result[0].subjects.length > 0){
-        const subject = data.result[0].subjects[0].subject;
-        statusText.innerText = `Welcome, ${subject}! Redirecting...`;
+    if(data.result && data.result.length > 0 && data.result[0].subjects.length > 0){
+      const subject = data.result[0].subjects[0].subject;
+      const similarity = data.result[0].subjects[0].similarity;
+      statusText.innerText = `Welcome, ${subject} (match ${(similarity*100).toFixed(1)}%)`;
+      
+      // Optional: validate subject against your backend staff DB here
+      // Example: await fetch('/validate-login', { method:'POST', body: JSON.stringify({ subject }) })
 
-        // Optional: validate subject against your backend staff DB here
-        // Example: await fetch('/validate-login', { method:'POST', body: JSON.stringify({ subject }) })
-
-        setTimeout(() => { window.location.href = "dashboard.html"; }, 2000);
-      } else {
-        statusText.innerText = "Face not recognized. Please try again.";
-      }
-
-    } catch(err){
-      console.error(err);
-      statusText.innerText = "Recognition failed. Check server connection.";
+      setTimeout(() => { window.location.href = "dashboard.html"; }, 2000);
+    } else {
+      statusText.innerText = "Face not recognized. Please try again.";
     }
-  }, "image/jpeg", 0.8);
+
+  } catch(err){
+    console.error(err);
+    statusText.innerText = "Recognition failed. Check server connection.";
+  }
 }
 </script>
 
