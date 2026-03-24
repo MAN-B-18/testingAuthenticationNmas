@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NMAS Staff Registration</title>
 <style>
-body{
+body {
   margin:0;
-  font-family:Arial;
+  font-family:Arial, sans-serif;
   background:linear-gradient(135deg,#ff7a00,#ffffff);
 }
-header{
+header {
   background:#ff7a00;
   color:white;
   padding:15px;
   text-align:center;
   font-size:22px;
 }
-.container{
+.container {
   background:white;
   width:500px;
   margin:40px auto;
@@ -25,14 +25,14 @@ header{
   border-radius:10px;
   box-shadow:0px 5px 15px rgba(0,0,0,0.2);
 }
-input{
+input {
   width:100%;
   padding:10px;
   margin:8px 0;
   border-radius:5px;
   border:1px solid #ccc;
 }
-button{
+button {
   width:100%;
   padding:12px;
   margin-top:10px;
@@ -43,29 +43,29 @@ button{
   color:white;
   cursor:pointer;
 }
-button:hover{
+button:hover {
   background:#e65c00;
 }
-video{
+video {
   width:100%;
   margin-top:10px;
   border-radius:10px;
   border:3px solid #ff7a00;
   display:none;
 }
-#previews{
+#previews {
   display:flex;
   flex-wrap:wrap;
   justify-content:center;
   margin-top:10px;
 }
-#previews img{
+#previews img {
   width:100px;
   margin:5px;
   border-radius:5px;
   border:2px solid #ff7a00;
 }
-#status{
+#status {
   margin-top:10px;
   font-weight:bold;
 }
@@ -85,7 +85,7 @@ video{
   <input id="facility" type="text" placeholder="Health Facility Name">
 
   <h3>Face Scanner</h3>
-  <button onclick="startCamera()">Open Image Scanner</button>
+  <button onclick="startCamera()">Open Camera</button>
   <video id="video" autoplay></video>
   <br>
   <button onclick="capture()">Capture Face</button>
@@ -101,12 +101,10 @@ const statusText = document.getElementById("status");
 const canvas = document.createElement("canvas");
 
 let stream = null;
-let capturedImages = [];
 
 const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
 const REGISTER_URL = "http://localhost:8000/api/v1/recognition/faces";
 
-// Open camera only on button click
 function startCamera(){
   navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
     .then(s => {
@@ -121,7 +119,6 @@ function startCamera(){
     });
 }
 
-// Capture face image and register immediately
 function capture(){
   if(!stream){
     statusText.innerText = "Start camera first!";
@@ -140,21 +137,16 @@ function capture(){
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   canvas.toBlob(async blob => {
-    // Show preview
     const img = document.createElement("img");
     img.src = URL.createObjectURL(blob);
     previews.appendChild(img);
 
-    capturedImages.push({ blob, subject: fullname });
-    statusText.innerText = `Captured ${capturedImages.length} face(s)`;
+    statusText.innerText = "Captured face, registering...";
 
-    // Register each face immediately to CompreFace
     await registerFace(blob, fullname);
-
   }, "image/jpeg", 0.8);
 }
 
-// Register face in CompreFace
 async function registerFace(blob, subject){
   const formData = new FormData();
   formData.append("file", blob, "face.jpg");
@@ -168,11 +160,14 @@ async function registerFace(blob, subject){
     });
 
     const data = await response.json();
-    console.log("Registration result for", subject, data);
+    console.log("Registration result:", data);
 
     if(data.result){
       statusText.innerText = `Registered: ${subject}`;
-      // Optional: Redirect only after at least 1 registration
+      // Save staff details to your backend here
+      // Example:
+      // await fetch('/save-staff', { method:'POST', body: JSON.stringify({ fullname, email, phone, staff, province, district, facility }) })
+
       setTimeout(() => { window.location.href = "login.html"; }, 2000);
     } else {
       statusText.innerText = `Failed to register ${subject}`;
