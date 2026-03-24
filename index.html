@@ -1,78 +1,67 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>NMAS - National Medical Access System</title>
-
 <style>
-
-body{
-margin:0;
-font-family:Arial;
-height:100vh;
-display:flex;
-justify-content:center;
-align-items:center;
-background:linear-gradient(135deg,#ff7a00,#ffffff);
+body {
+  margin:0;
+  font-family:Arial, sans-serif;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,#ff7a00,#ffffff);
 }
-
-.container{
-text-align:center;
-background:white;
-padding:50px;
-border-radius:10px;
-box-shadow:0px 5px 15px rgba(0,0,0,0.2);
-width:420px;
+.container {
+  text-align:center;
+  background:white;
+  padding:50px;
+  border-radius:10px;
+  box-shadow:0px 5px 15px rgba(0,0,0,0.2);
+  width:420px;
 }
-
-.logo{
-width:120px;
-margin-bottom:20px;
+.logo {
+  width:120px;
+  margin-bottom:20px;
 }
-
-h1{
-color:#ff7a00;
+h1 {
+  color:#ff7a00;
 }
-
-button{
-width:200px;
-padding:12px;
-margin:10px;
-border:none;
-border-radius:6px;
-font-size:16px;
-cursor:pointer;
-background:#ff7a00;
-color:white;
+a.button {
+  display:inline-block;
+  width:200px;
+  padding:12px;
+  margin:10px;
+  border:none;
+  border-radius:6px;
+  font-size:16px;
+  text-decoration:none;
+  text-align:center;
+  background:#ff7a00;
+  color:white;
+  cursor:pointer;
 }
-
-button:hover{
-background:#e65c00;
+a.button:hover {
+  background:#e65c00;
 }
-
+.tagline {
+  margin-top:15px;
+  font-size:14px;
+  color:#555;
+}
 </style>
 </head>
-
 <body>
-
 <div class="container">
+  <img src="nmas-logo.png" class="logo" alt="NMAS Logo">
+  <h1>NMAS</h1>
+  <p>National Medical Access System</p>
 
-<img src="nmas-logo.png" class="logo">
+  <a href="signup.html" class="button">Register Staff</a>
+  <a href="login.html" class="button">Login</a>
 
-<h1>NMAS</h1>
-<p>National Medical Access System</p>
-
-<a href="signup.html">
-<button>Register Staff</button>
-</a>
-
-<a href="login.html">
-<button>Login</button>
-</a>
-
+  <p class="tagline">Secure access powered by facial recognition</p>
 </div>
-
 </body>
 </html>
-
