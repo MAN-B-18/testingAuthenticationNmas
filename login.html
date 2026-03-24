@@ -5,106 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NMAS Staff Login</title>
 <style>
-body {
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:linear-gradient(135deg,#ff7a00,#ffffff);
-}
-header {
-  background:#ff7a00;
-  color:white;
-  padding:15px;
-  text-align:center;
-  font-size:22px;
-}
-.container {
-  background:white;
-  width:500px;
-  margin:40px auto;
-  padding:30px;
-  border-radius:10px;
-  box-shadow:0px 5px 15px rgba(0,0,0,0.2);
-  text-align:center;
-}
-button {
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border:none;
-  border-radius:6px;
-  font-size:16px;
-  background:#ff7a00;
-  color:white;
-  cursor:pointer;
-}
-button:hover {
-  background:#e65c00;
-}
-video {
-  width:100%;
-  margin-top:10px;
-  border-radius:10px;
-  border:3px solid #ff7a00;
-  display:none;
-}
-#status {
-  margin-top:10px;
-  font-weight:bold;
-}
+body { font-family: Arial; text-align:center; background:#f4f6f9; }
+header { background:#1e1e1e; color:white; padding:15px; font-size:22px; }
+video { border:4px solid #333; border-radius:10px; margin-top:20px; }
+canvas { display:none; }
+button { padding:12px 25px; margin:10px; font-size:16px; border:none; border-radius:5px; background:#007BFF; color:white; cursor:pointer; }
+button:hover { background:#0056b3; }
+#status { margin-top:10px; font-size:18px; }
+#result { margin-top:20px; font-size:20px; font-weight:bold; }
 </style>
 </head>
 <body>
 
 <header>NMAS Staff Login</header>
 
-<div class="container">
-  <h3>Face Scanner</h3>
-  <button onclick="startCamera()">Open Camera</button>
-  <video id="video" autoplay></video>
-  <br>
-  <button onclick="capture()">Login with Face</button>
-  <p id="status">Camera inactive</p>
-</div>
+<video id="video" width="640" height="480" autoplay></video>
+<br>
+<button onclick="capture()">Login with Face</button>
+
+<canvas id="canvas" width="640" height="480"></canvas>
+
+<div id="status">Starting camera...</div>
+<div id="result">Waiting for recognition...</div>
 
 <script>
 const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
 const statusText = document.getElementById("status");
-const canvas = document.createElement("canvas");
+const resultText = document.getElementById("result");
 
-let stream = null;
-
-// Use the API key from your Recognition service
-const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
+// Replace with your CompreFace Recognition service API key
+const API_KEY = "YOUR_RECOGNITION_API_KEY";
 const RECOGNIZE_URL = "http://localhost:8000/api/v1/recognition/recognize";
 
-function startCamera(){
-  navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
-    .then(s => {
-      stream = s;
-      video.srcObject = stream;
-      video.style.display = "block";
-      statusText.innerText = "Camera active";
-    })
-    .catch(err => {
-      console.error(err);
-      statusText.innerText = "Camera permission denied";
-    });
-}
+// Start camera
+navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } })
+.then(stream => {
+  video.srcObject = stream;
+  statusText.innerText = "Camera ready";
+})
+.catch(err => {
+  statusText.innerText = "Camera access denied";
+  console.error(err);
+});
 
 function capture(){
-  if(!stream){
-    statusText.innerText = "Start camera first!";
-    return;
-  }
-
   const ctx = canvas.getContext("2d");
-  canvas.width = 640;
-  canvas.height = 480;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  canvas.toBlob(async blob => {
-    statusText.innerText = "Processing face...";
-    await recognizeFace(blob);
+  canvas.toBlob(blob => {
+    recognizeFace(blob);
   }, "image/jpeg", 0.95);
 }
 
@@ -113,31 +63,26 @@ async function recognizeFace(blob){
   formData.append("file", blob, "face.jpg");
 
   try{
+    statusText.innerText = "Recognizing face...";
     const response = await fetch(RECOGNIZE_URL, {
       method: "POST",
       headers: { "x-api-key": API_KEY },
       body: formData
     });
-
     const data = await response.json();
-    console.log("Recognition result:", data);
+    console.log(data);
 
     if(data.result && data.result.length > 0 && data.result[0].subjects.length > 0){
       const subject = data.result[0].subjects[0].subject;
       const similarity = data.result[0].subjects[0].similarity;
-      statusText.innerText = `Welcome, ${subject} (match ${(similarity*100).toFixed(1)}%)`;
-      
-      // Optional: validate subject against your backend staff DB here
-      // Example: await fetch('/validate-login', { method:'POST', body: JSON.stringify({ subject }) })
-
+      resultText.innerHTML = `Welcome, ${subject}<br>Similarity: ${(similarity*100).toFixed(2)}%`;
       setTimeout(() => { window.location.href = "dashboard.html"; }, 2000);
     } else {
-      statusText.innerText = "Face not recognized. Please try again.";
+      resultText.innerText = "Face not recognized. Please try again.";
     }
-
-  } catch(err){
-    console.error(err);
-    statusText.innerText = "Recognition failed. Check server connection.";
+  } catch(error){
+    console.error(error);
+    resultText.innerText = "Recognition failed.";
   }
 }
 </script>
