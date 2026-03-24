@@ -3,182 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NMAS Staff Registration</title>
+<title>NMAS Staff Signup</title>
 <style>
-body {
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:linear-gradient(135deg,#ff7a00,#ffffff);
-}
-header {
-  background:#ff7a00;
-  color:white;
-  padding:15px;
-  text-align:center;
-  font-size:22px;
-}
-.container {
-  background:white;
-  width:500px;
-  margin:40px auto;
-  padding:30px;
-  border-radius:10px;
-  box-shadow:0px 5px 15px rgba(0,0,0,0.2);
-}
-input {
-  width:100%;
-  padding:10px;
-  margin:8px 0;
-  border-radius:5px;
-  border:1px solid #ccc;
-}
-button {
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border:none;
-  border-radius:6px;
-  font-size:16px;
-  background:#ff7a00;
-  color:white;
-  cursor:pointer;
-}
-button:hover {
-  background:#e65c00;
-}
-video {
-  width:100%;
-  margin-top:10px;
-  border-radius:10px;
-  border:3px solid #ff7a00;
-  display:none;
-}
-#previews {
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:center;
-  margin-top:10px;
-}
-#previews img {
-  width:100px;
-  margin:5px;
-  border-radius:5px;
-  border:2px solid #ff7a00;
-}
-#status {
-  margin-top:10px;
-  font-weight:bold;
-}
+body { font-family: Arial; text-align:center; background:#f4f6f9; }
+header { background:#1e1e1e; color:white; padding:15px; font-size:22px; }
+video { border:4px solid #333; border-radius:10px; margin-top:20px; }
+canvas { display:none; }
+button { padding:12px 25px; margin:10px; font-size:16px; border:none; border-radius:5px; background:#28a745; color:white; cursor:pointer; }
+button:hover { background:#1e7e34; }
+#status { margin-top:10px; font-size:18px; }
 </style>
 </head>
 <body>
 
-<header>NMAS Staff Registration</header>
+<header>NMAS Staff Signup</header>
 
-<div class="container">
-  <input id="fullname" type="text" placeholder="Full Name">
-  <input id="email" type="email" placeholder="Email">
-  <input id="phone" type="text" placeholder="Phone Number">
-  <input id="staff" type="text" placeholder="Staff Number">
-  <input id="province" type="text" placeholder="Province">
-  <input id="district" type="text" placeholder="District">
-  <input id="facility" type="text" placeholder="Health Facility Name">
+<video id="video" width="640" height="480" autoplay></video>
+<br>
+<button onclick="capture()">Register Face</button>
 
-  <h3>Face Scanner</h3>
-  <button onclick="startCamera()">Open Camera</button>
-  <video id="video" autoplay></video>
-  <br>
-  <button onclick="capture()">Capture Face</button>
+<canvas id="canvas" width="640" height="480"></canvas>
 
-  <div id="previews"></div>
-  <p id="status">Camera inactive</p>
-</div>
+<div id="status">Starting camera...</div>
 
 <script>
 const video = document.getElementById("video");
-const previews = document.getElementById("previews");
+const canvas = document.getElementById("canvas");
 const statusText = document.getElementById("status");
-const canvas = document.createElement("canvas");
 
-let stream = null;
-
-// Use the API key from your Recognition service
-const API_KEY = "ccb5846a-2b2b-46c6-adac-1802ac50488b";
+// Replace with your CompreFace Recognition service API key
+const API_KEY = "YOUR_RECOGNITION_API_KEY";
 const REGISTER_URL = "http://localhost:8000/api/v1/recognition/faces";
 
-function startCamera(){
-  navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
-    .then(s => {
-      stream = s;
-      video.srcObject = stream;
-      video.style.display = "block";
-      statusText.innerText = "Camera active";
-    })
-    .catch(err => {
-      console.error(err);
-      statusText.innerText = "Camera permission denied";
-    });
-}
+// Start camera
+navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } })
+.then(stream => {
+  video.srcObject = stream;
+  statusText.innerText = "Camera ready";
+})
+.catch(err => {
+  statusText.innerText = "Camera access denied";
+  console.error(err);
+});
 
 function capture(){
-  if(!stream){
-    statusText.innerText = "Start camera first!";
-    return;
-  }
-
-  const fullname = document.getElementById("fullname").value.trim();
-  if(fullname === ""){
-    statusText.innerText = "Enter Full Name first!";
-    return;
-  }
-
   const ctx = canvas.getContext("2d");
-  canvas.width = 640;
-  canvas.height = 480;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  canvas.toBlob(async blob => {
-    const img = document.createElement("img");
-    img.src = URL.createObjectURL(blob);
-    previews.appendChild(img);
-
-    statusText.innerText = "Captured face, registering...";
-
-    await registerFace(blob, fullname);
-  }, "image/jpeg", 0.95); // higher quality
+  canvas.toBlob(blob => {
+    let name = prompt("Enter your full name to register:");
+    if(name) registerFace(blob, name);
+  }, "image/jpeg", 0.95);
 }
 
-async function registerFace(blob, subject){
+async function registerFace(blob, name){
   const formData = new FormData();
   formData.append("file", blob, "face.jpg");
-  formData.append("subject", subject);
+  formData.append("subject", name);
 
   try{
+    statusText.innerText = "Registering face...";
     const response = await fetch(REGISTER_URL, {
       method: "POST",
       headers: { "x-api-key": API_KEY },
       body: formData
     });
-
     const data = await response.json();
-    console.log("Registration result:", data);
+    console.log(data);
 
     if(data.result && data.result.length > 0){
-      statusText.innerText = `Registered: ${subject}`;
-      // Save staff details to your backend here
-      // Example:
-      // await fetch('/save-staff', { method:'POST', body: JSON.stringify({ fullname, email, phone, staff, province, district, facility }) })
-
+      statusText.innerText = `Registered successfully: ${name}`;
       setTimeout(() => { window.location.href = "login.html"; }, 2000);
-    } else if(data.message){
-      statusText.innerText = `Error: ${data.message}`;
     } else {
-      statusText.innerText = `Failed to register ${subject} (no face detected)`;
+      statusText.innerText = "No face detected. Please try again.";
     }
-
-  } catch(err){
-    console.error(err);
-    statusText.innerText = `Registration failed for ${subject}`;
+  } catch(error){
+    console.error(error);
+    statusText.innerText = "Registration failed.";
   }
 }
 </script>
